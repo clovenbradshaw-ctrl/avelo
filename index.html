@@ -380,6 +380,9 @@
       })));
 
       return mainCards.map(card => {
+        // helper to normalize priority values
+        const normalizePriority = p => (p || 'medium').toString().toLowerCase();
+
         // base card object
         const obj = {
           id:       card.id,
@@ -414,20 +417,20 @@
                 
                 // Try to find the actual record this JSON represents
                 let recordId = m.subCardRecordId || m.recordId || m.id;
-                let priority = m.priority || 'medium';
-                
+                let priority = normalizePriority(m.priority);
+
                 // Look for a matching child record to get the real ID and priority
-                const matchingChild = data.find(child => 
+                const matchingChild = data.find(child =>
                   (child.headline === m.headline || child.subject === m.subject) &&
-                  Array.isArray(child.parent_card) && 
+                  Array.isArray(child.parent_card) &&
                   child.parent_card.includes(card.id)
                 );
-                
+
                 if (matchingChild) {
                   recordId = matchingChild.subCardRecordId || matchingChild.id;
-                  priority = matchingChild.priority || priority;
+                  priority = normalizePriority(matchingChild.priority);
                 }
-                
+
                 obj.modalContent.push({
                   subCardRecordId: recordId || `json_${Date.now()}_${Math.random()}`,
                   headline: m.headline || '',
@@ -452,7 +455,7 @@
               subject:  child.subject  || '',
               content:  child.content  || '',
               image:    child.image    || '',
-              priority: child.priority || 'medium'
+              priority: normalizePriority(child.priority)
             };
             
             const key = createSubcardKey(childData);
@@ -465,10 +468,11 @@
           }
         });
 
-        // Sort modal content by priority
-        const priorityOrder = { 'high': 0, 'medium': 1, 'low': 2 };
+        // Sort modal content by priority (defaulting to 'medium')
+        const priorityOrder = { high: 0, medium: 1, low: 2 };
         obj.modalContent.sort((a, b) => {
-          return (priorityOrder[a.priority] || 1) - (priorityOrder[b.priority] || 1);
+          const getVal = p => priorityOrder[p] ?? priorityOrder.medium;
+          return getVal(a.priority) - getVal(b.priority);
         });
 
         console.log(`Modal content for "${card['Card Title']}" (${card.id}):`, 
